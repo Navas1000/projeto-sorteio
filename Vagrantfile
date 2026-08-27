@@ -10,7 +10,6 @@ Vagrant.configure("2") do |config|
   # ============================================================
 
   config.vm.define "frontend" do |frontend|
-
     frontend.vm.hostname = "frontend"
 
     # Rede interna do projeto
@@ -31,16 +30,13 @@ Vagrant.configure("2") do |config|
     end
 
     frontend.vm.provision "shell", inline: <<-SHELL
-
       apt-get update -y
-
-      # Instala os programas necessários no frontend
       apt-get install -y nginx net-tools iptables
 
-      # Permite que o frontend encaminhe pacotes de outras VMs
+      # Permite que o frontend encaminhe pacotes das VMs internas
       sysctl -w net.ipv4.ip_forward=1
 
-      # Descobre qual interface do frontend possui acesso externo
+      # Descobre automaticamente a interface que possui acesso externo
       OUT_IF=$(ip route | awk '/default/ {print $5; exit}')
 
       # Faz NAT da rede interna para a Internet
@@ -49,10 +45,8 @@ Vagrant.configure("2") do |config|
         -o "$OUT_IF" \
         -j MASQUERADE
 
-      # Inicia o NGINX
       systemctl enable nginx
       systemctl restart nginx
-
     SHELL
   end
 
@@ -63,10 +57,9 @@ Vagrant.configure("2") do |config|
   # ============================================================
 
   config.vm.define "backend" do |backend|
-
     backend.vm.hostname = "backend"
 
-    # Rede interna
+    # Rede interna do projeto
     backend.vm.network "private_network",
       ip: "10.20.30.2",
       netmask: "255.255.255.0",
@@ -79,15 +72,18 @@ Vagrant.configure("2") do |config|
     end
 
     backend.vm.provision "shell", inline: <<-SHELL
-
       apt-get update -y
-
-      # Java para executar o Spring Boot
       apt-get install -y openjdk-17-jdk net-tools
 
-      # Define o frontend como gateway para acesso externo
-      ip route replace default via 10.20.30.1
+      # Remove a rota padrão criada pelo NAT do Vagrant
+      ip route del default via 10.0.2.2 2>/dev/null || true
 
+      # Remove rotas específicas criadas pelo DHCP do NAT
+      ip route del 8.8.8.8 via 10.0.2.2 2>/dev/null || true
+      ip route del 8.8.4.4 via 10.0.2.2 2>/dev/null || true
+
+      # Define o frontend como gateway padrão
+      ip route replace default via 10.20.30.1
     SHELL
   end
 
@@ -98,14 +94,18 @@ Vagrant.configure("2") do |config|
   # ============================================================
 
   config.vm.define "db" do |db|
-
     db.vm.hostname = "db"
 
-    # Rede interna
+    # Rede interna do projeto
     db.vm.network "private_network",
       ip: "10.20.30.3",
       netmask: "255.255.255.0",
       virtualbox__intnet: "intnet1"
+
+    # Permite acessar o MySQL da VM pelo Windows
+    db.vm.network "forwarded_port",
+      guest: 3306,
+      host: 3306
 
     db.vm.provider "virtualbox" do |vb|
       vb.name = "db"
@@ -114,19 +114,21 @@ Vagrant.configure("2") do |config|
     end
 
     db.vm.provision "shell", inline: <<-SHELL
-
       apt-get update -y
-
-      # Instala o banco MySQL
       apt-get install -y mysql-server net-tools
 
-      # Define o frontend como gateway
+      # Remove a rota padrão criada pelo NAT do Vagrant
+      ip route del default via 10.0.2.2 2>/dev/null || true
+
+      # Remove rotas específicas criadas pelo DHCP do NAT
+      ip route del 8.8.8.8 via 10.0.2.2 2>/dev/null || true
+      ip route del 8.8.4.4 via 10.0.2.2 2>/dev/null || true
+
+      # Define o frontend como gateway padrão
       ip route replace default via 10.20.30.1
 
-      # Faz o MySQL iniciar junto com a VM
       systemctl enable mysql
       systemctl restart mysql
-
     SHELL
   end
 

@@ -1,2 +1,13 @@
+# Vagrant
 .vagrant/
-*.log
+
+# IntelliJ
+.idea/
+*.iml
+
+# Maven
+target/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
