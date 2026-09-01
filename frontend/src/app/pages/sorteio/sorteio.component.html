@@ -1,0 +1,58 @@
+<div class="container">
+  <header>
+    <h1>🎲 Sorteio de Números</h1>
+    <button class="btn-logout" (click)="logout()">Sair</button>
+  </header>
+
+  <!-- TELA 1: Criar Nova Sessão (aparece quando NÃO há sessão ativa) -->
+  @if (!sessaoAtiva) {
+    <div class="card">
+      <h2>Nova Sessão de Sorteio</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="min">Número mínimo</label>
+          <input id="min" type="number" [(ngModel)]="numeroMinimo">
+        </div>
+        <div class="form-group">
+          <label for="max">Número máximo</label>
+          <input id="max" type="number" [(ngModel)]="numeroMaximo">
+        </div>
+      </div>
+      <button (click)="criarSessao()">Criar Sessão</button>
+    </div>
+  }
+
+  <!-- TELA 2: Sessão Ativa (aparece quando HÁ sessão ativa) -->
+  @if (sessaoAtiva) {
+    <div class="card">
+      <h2>Sessão: {{ sessaoAtiva.numeroMinimo }} a {{ sessaoAtiva.numeroMaximo }}</h2>
+
+      <div class="actions">
+        <button class="btn-sortear" (click)="sortear()">🎲 Sortear</button>
+        <button class="btn-reset" (click)="resetar()">🔄 Resetar</button>
+        <button class="btn-nova" (click)="novaSessao()">➕ Nova Sessão</button>
+      </div>
+
+      <!-- Último número sorteado (grande, em destaque) -->
+      @if (ultimoSorteado !== null) {
+        <div class="resultado">
+          <span class="numero-destaque">{{ ultimoSorteado }}</span>
+        </div>
+      }
+
+      <!-- Histórico de todos os sorteados -->
+      <div class="historico">
+        <h3>Sorteados: {{ sessaoAtiva.totalSorteados }} / {{ sessaoAtiva.totalPossiveis }}</h3>
+        <div class="numeros-lista">
+          @for (s of sorteios; track s.idSorteio) {
+            <span class="numero-item">{{ s.numeroSorteado }}</span>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Mensagens de sucesso e erro -->
+  @if (mensagem) { <p class="mensagem">{{ mensagem }}</p> }
+  @if (erro) { <p class="erro">{{ erro }}</p> }
+</div>
